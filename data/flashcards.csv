@@ -1,0 +1,4 @@
+front,back,hint
+What is Big-O for binary search?,O(log n),Think about halving the search space
+Define TCP handshake,SYN, SYN-ACK, ACK,Transport layer, connection setup
+What is a Python list comprehension?,A concise syntax to build lists,[expression for x in iterable if cond]
