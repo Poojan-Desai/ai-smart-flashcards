@@ -1,18 +1,52 @@
-# AI Smart Flashcard System
+# Smart Flashcards
 
-I built a small Streamlit app with a spaced‑repetition schedule (SM‑2 style). I can add cards, review, and score myself from 1–5. There’s also an optional hint button; if no API key is set, it just gives a simple nudge.
+An early Streamlit learning project for creating and reviewing flashcards with
+a small SQLite database and an SM-2-inspired spaced-repetition scheduler. Users
+can add cards, review the next due card, score recall from 1–5, and optionally
+request a short study hint.
 
-## How I run it
+The core review workflow works without any paid service. If `OPENAI_API_KEY` is
+unset—or a hint request fails—the app uses the card's saved hint or a generic
+study prompt. The optional hint is an API-assisted convenience, not the
+scheduling engine.
+
+## Architecture
+
+```text
+Streamlit interface -> SQLite card store
+                    -> SM-2-inspired scheduler
+                    -> optional OpenAI hint provider with local fallback
+```
+
+## Run locally
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-# Optional: export OPENAI_API_KEY=...
 streamlit run app.py
 ```
 
-## What I learned
-Keeping the data model simple (SQLite), and focusing on the review flow first. The SM‑2 tweaks were decent for a first version.
+To enable optional generated hints, copy `.env.example` to `.env`, add your key,
+and load it into your shell before starting the app. Never commit `.env`.
 
-## Notes
-- I keep things simple and readable.
-- If something feels off, I open an issue and fix it quickly.
+## Test
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+The tests cover first reviews, interval growth, failed recalls, the minimum ease
+factor, and invalid scores.
+
+## Limitations
+
+- SQLite is local and designed for a single user.
+- Importing the starter CSV more than once creates duplicate cards.
+- The scheduler is inspired by SM-2; it is not a validated learning study.
+- There is no account, sync, or deployment layer.
+
+## Stack
+
+Python, Streamlit, SQLite, pandas, OpenAI's optional Python client, and pytest.
