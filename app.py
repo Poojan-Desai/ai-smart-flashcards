@@ -1,48 +1,9 @@
 import os
-import pandas as pd
-import sqlite3
-from datetime import datetime
 import streamlit as st
 from srs import CardState, schedule
+from storage import add_card, import_csv, init_db, load_due, update_card
 
 DB = "flashcards.db"
-def init_db():
-    conn = sqlite3.connect(DB)
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS cards(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        front TEXT NOT NULL,
-        back TEXT NOT NULL,
-        hint TEXT,
-        interval INT DEFAULT 0,
-        repetition INT DEFAULT 0,
-        ease REAL DEFAULT 2.5,
-        next_review TEXT DEFAULT (datetime('now'))
-    )""")
-    conn.commit()
-    return conn
-
-def add_card(conn, front, back, hint):
-    cur = conn.cursor()
-    cur.execute("INSERT INTO cards(front, back, hint, next_review) VALUES(?,?,?,datetime('now'))", (front, back, hint))
-    conn.commit()
-
-def load_due(conn):
-    cur = conn.cursor()
-    cur.execute("SELECT id, front, back, hint, interval, repetition, ease, next_review FROM cards WHERE datetime(next_review) <= datetime('now') ORDER BY next_review LIMIT 1")
-    return cur.fetchone()
-
-def update_card(conn, id, state, next_review):
-    cur = conn.cursor()
-    cur.execute("UPDATE cards SET interval=?, repetition=?, ease=?, next_review=? WHERE id=?",
-                (state.interval, state.repetition, state.ease, next_review.isoformat(), id))
-    conn.commit()
-
-def import_csv(conn, path='data/flashcards.csv'):
-    if not os.path.exists(path): return
-    df = pd.read_csv(path)
-    for _, r in df.iterrows():
-        add_card(conn, r['front'], r['back'], r.get('hint', ''))
 
 def ai_hint(front, default_hint):
     key = os.getenv('OPENAI_API_KEY')
@@ -66,21 +27,23 @@ def ai_hint(front, default_hint):
 
 st.set_page_config(page_title="AI Smart Flashcards", page_icon="🧠", layout="centered")
 st.title("🧠 AI Smart Flashcards")
-conn = init_db()
+conn = init_db(DB)
 
 with st.sidebar:
     st.header("Manage")
     if st.button("Import starter CSV"):
-        import_csv(conn)
-        st.success("Imported starter cards.")
+        inserted, skipped = import_csv(conn)
+        st.success(f"Imported {inserted} card(s); skipped {skipped} duplicate(s).")
     with st.form("add_card"):
         f = st.text_input("Front")
         b = st.text_area("Back")
         h = st.text_input("Hint (optional)")
         submitted = st.form_submit_button("Add card")
         if submitted and f and b:
-            add_card(conn, f, b, h)
-            st.success("Added card.")
+            if add_card(conn, f, b, h):
+                st.success("Added card.")
+            else:
+                st.info("That card is already in the deck.")
 
 row = load_due(conn)
 if not row:
