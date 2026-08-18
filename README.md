@@ -5,6 +5,10 @@ a small SQLite database and an SM-2-inspired spaced-repetition scheduler. Users
 can add cards, review the next due card, score recall from 1–5, and optionally
 request a short study hint.
 
+Card persistence is separated into a testable storage layer. CSV imports are
+idempotent: normalized front/back duplicates are skipped and reported instead
+of silently creating repeated cards.
+
 The core review workflow works without any paid service. If `OPENAI_API_KEY` is
 unset—or a hint request fails—the app uses the card's saved hint or a generic
 study prompt. The optional hint is an API-assisted convenience, not the
@@ -37,13 +41,12 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-The tests cover first reviews, interval growth, failed recalls, the minimum ease
-factor, and invalid scores.
+The tests cover scheduling behavior, storage validation, duplicate prevention,
+and repeatable CSV imports.
 
 ## Limitations
 
 - SQLite is local and designed for a single user.
-- Importing the starter CSV more than once creates duplicate cards.
 - The scheduler is inspired by SM-2; it is not a validated learning study.
 - There is no account, sync, or deployment layer.
 
